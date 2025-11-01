@@ -1,40 +1,50 @@
 // src/App.jsx
 
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { Draggable } from 'gsap/Draggable';
 import { InertiaPlugin } from 'gsap/InertiaPlugin';
 import './App.css';
 
 import ProjectIsland from './components/ProjectIsland';
+import ProjectDetail from './components/ProjectDetail';
 
 gsap.registerPlugin(Draggable, InertiaPlugin);
 
-// ⭐ PROJECT DATA
+// ⭐ PROJECT DATA (added description field)
 const projectsData = [
   {
     id: "project-1",
     title: "AI Research Portal",
     imageSrc: "https://picsum.photos/seed/ai123/400/300",
-    position: { top: "2100px", left: "1900px" }
+    position: { top: "2100px", left: "1900px" },
+    description:
+      "AI Research Portal centralizes machine learning models, datasets, and research papers into an interactive environment."
   },
   {
     id: "project-2",
     title: "Blockchain Health System",
     imageSrc: "https://picsum.photos/seed/blockchain456/400/300",
-    position: { top: "2750px", left: "2200px" }
+    position: { top: "2750px", left: "2200px" },
+    description:
+      "A decentralized medical records system designed using blockchain for secure storage and transparent verification."
   },
   {
     id: "project-3",
     title: "Portfolio Universe",
     imageSrc: "https://picsum.photos/seed/portfolio789/400/300",
-    position: { top: "2300px", left: "2800px" }
+    position: { top: "2300px", left: "2800px" },
+    description:
+      "An immersive, interactive 3D portfolio world that showcases projects as floating islands."
   }
 ];
 
 function App() {
   const canvasRef = useRef(null);
   const viewportRef = useRef(null);
+
+  // ⭐ NEW: state for selected project detail view
+  const [selectedProject, setSelectedProject] = useState(null);
 
   const isZoomedRef = useRef(false);
   const homeStateRef = useRef({ x: 0, y: 0, scale: 1 });
@@ -75,7 +85,6 @@ function App() {
 
     homeStateRef.current = { x: initialX, y: initialY, scale: 1 };
 
-    // IMPORTANT FIX
     gsap.set(canvas, { 
       x: homeStateRef.current.x,
       y: homeStateRef.current.y,
@@ -92,6 +101,8 @@ function App() {
 
     // --------- ZOOM OUT ---------
     const handleZoomOut = () => {
+      setSelectedProject(null); // ⭐ new: hide detail view
+
       if (!isZoomedRef.current) return;
 
       isZoomedRef.current = false;
@@ -108,22 +119,22 @@ function App() {
     };
 
     // --------- ZOOM IN ---------
-    const handleZoomIn = (island) => {
+    const handleZoomIn = (islandElement, projectData) => {
       if (isZoomedRef.current) return;
 
       isZoomedRef.current = true;
       draggable.disable();
       viewport.classList.add('zoomed-in');
 
-      const islandCenterX = island.offsetLeft + island.offsetWidth / 2;
-      const islandCenterY = island.offsetTop + island.offsetHeight / 2;
+      const islandCenterX = islandElement.offsetLeft + islandElement.offsetWidth / 2;
+      const islandCenterY = islandElement.offsetTop + islandElement.offsetHeight / 2;
 
       const vpWidth = viewport.offsetWidth;
       const vpHeight = viewport.offsetHeight;
 
       const paddingRatio = 0.8;
-      const scaleX = (vpWidth * paddingRatio) / island.offsetWidth;
-      const scaleY = (vpHeight * paddingRatio) / island.offsetHeight;
+      const scaleX = (vpWidth * paddingRatio) / islandElement.offsetWidth;
+      const scaleY = (vpHeight * paddingRatio) / islandElement.offsetHeight;
       const newScale = Math.min(scaleX, scaleY, 3);
 
       const newX = vpWidth / 2 - islandCenterX * newScale;
@@ -134,7 +145,10 @@ function App() {
         y: newY,
         scale: newScale,
         duration: 0.9,
-        ease: 'power3.inOut'
+        ease: 'power3.inOut',
+        onComplete: () => {
+          setSelectedProject(projectData); // ⭐ open project detail
+        }
       });
     };
 
@@ -142,9 +156,14 @@ function App() {
     const islandHandlers = [];
 
     islands.forEach(island => {
+      // find project data for this island
+      const projectData = projectsData.find(p => p.id === island.id);
+
       const clickHandler = (e) => {
         e.stopPropagation();
-        handleZoomIn(island);
+        if (projectData) {
+          handleZoomIn(island, projectData);
+        }
       };
 
       island.addEventListener('click', clickHandler);
@@ -169,25 +188,37 @@ function App() {
   }, []);
 
   return (
-    <div className="viewport" ref={viewportRef}>
-      <div className="canvas" ref={canvasRef}>
+    <>
+      <div className="viewport" ref={viewportRef}>
+        <div className="canvas" ref={canvasRef}>
+          
+          {/* ORIGINAL WELCOME ISLAND */}
+          <div className="island" id="island-1" style={{ top: "2400px", left: "2350px" }}>
+            Welcome
+          </div>
 
-        {/* ORIGINAL WELCOME ISLAND */}
-        <div className="island" id="island-1" style={{ top: "2400px", left: "2350px" }}>
-          Welcome
+          {/* PROJECT ISLANDS */}
+          {projectsData.map((project) => (
+            <ProjectIsland
+              key={project.id}
+              id={project.id}
+              project={project}
+            />
+          ))}
         </div>
-
-        {/* ⭐ PROJECT ISLANDS (dynamic) */}
-        {projectsData.map((project) => (
-          <ProjectIsland
-            key={project.id}
-            id={project.id}
-            project={project}
-          />
-        ))}
-
       </div>
-    </div>
+
+      {/* ⭐ DETAIL VIEW OVERLAY */}
+      {selectedProject && (
+        <ProjectDetail 
+          project={selectedProject} 
+          onClose={() => {
+            const viewport = viewportRef.current;
+            viewport.click(); // triggers zoomOut logic
+          }}
+        />
+      )}
+    </>
   );
 }
 
