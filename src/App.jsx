@@ -1,5 +1,4 @@
 // src/App.jsx
-
 import { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { Draggable } from 'gsap/Draggable';
@@ -11,23 +10,27 @@ gsap.registerPlugin(Draggable, InertiaPlugin);
 function App() {
   const canvasRef = useRef(null);
   const viewportRef = useRef(null);
-  const scaleRef = useRef(1); // ✅ NEW: Ref to track the current scale
+
+  const isZoomedRef = useRef(false);
+  const homeStateRef = useRef({ x: 0, y: 0, scale: 1 });
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
     const canvas = canvasRef.current;
-    // ... (the bounds calculation and centering code remains the same) ...
-    
-    // Previous code for bounds and initial centering
     const islands = gsap.utils.toArray('.island');
+
     if (!viewport || !canvas || islands.length === 0) return;
+
+    // --------- CALCULATE CONTENT BOUNDS ---------
     let contentBounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+
     islands.forEach(island => {
       contentBounds.minX = Math.min(contentBounds.minX, island.offsetLeft);
       contentBounds.minY = Math.min(contentBounds.minY, island.offsetTop);
       contentBounds.maxX = Math.max(contentBounds.maxX, island.offsetLeft + island.offsetWidth);
       contentBounds.maxY = Math.max(contentBounds.maxY, island.offsetTop + island.offsetHeight);
     });
+
     const padding = 100;
     const bounds = {
       minX: viewport.offsetWidth - contentBounds.maxX - padding,
@@ -35,49 +38,107 @@ function App() {
       minY: viewport.offsetHeight - contentBounds.maxY - padding,
       maxY: -contentBounds.minY + padding
     };
+
+    // --------- INITIAL CENTER ON island-1 ---------
     const welcomeIsland = document.getElementById('island-1');
-    const initialX = viewport.offsetWidth / 2 - (welcomeIsland.offsetLeft + welcomeIsland.offsetWidth / 2);
-    const initialY = viewport.offsetHeight / 2 - (welcomeIsland.offsetTop + welcomeIsland.offsetHeight / 2);
-    gsap.set(canvas, { x: initialX, y: initialY });
-    
-    const draggableInstance = Draggable.create(canvas, {
-      type: "x,y",
+
+    const initialX = viewport.offsetWidth / 2 -
+      (welcomeIsland.offsetLeft + welcomeIsland.offsetWidth / 2);
+
+    const initialY = viewport.offsetHeight / 2 -
+      (welcomeIsland.offsetTop + welcomeIsland.offsetHeight / 2);
+
+    homeStateRef.current = { x: initialX, y: initialY, scale: 1 };
+
+    // Ensure transform-origin is set for GSAP and the computed math (top-left anchor)
+    gsap.set(canvas, { x: homeStateRef.current.x, y: homeStateRef.current.y, scale: 1, transformOrigin: '0 0' });
+
+    // --------- DRAGGABLE SETUP ---------
+    const draggable = Draggable.create(canvas, {
+      type: 'x,y',
       bounds: bounds,
       inertia: true,
-      edgeResistance: 0.9,
-      force3D: true
-    });
+      edgeResistance: 0.9
+    })[0];
 
-    // --- ✅ NEW ZOOM LOGIC ---
-    const handleWheel = (e) => {
-      e.preventDefault(); // Prevent page from scrolling
+    // --------- ZOOM OUT ---------
+    const handleZoomOut = () => {
+      if (!isZoomedRef.current) return;
 
-      const zoomFactor = 1.2;
-      let newScale = scaleRef.current;
+      isZoomedRef.current = false;
+      viewport.classList.remove('zoomed-in');
 
-      if (e.deltaY < 0) { // Scrolling up -> Zoom In
-        newScale *= zoomFactor;
-      } else { // Scrolling down -> Zoom Out
-        newScale /= zoomFactor;
-      }
-      
-      scaleRef.current = newScale;
-
-      // Animate the scale with GSAP for a smooth effect
       gsap.to(canvas, {
-        scale: newScale,
-        duration: 0.5,
-        ease: 'power2.out'
+        x: homeStateRef.current.x,
+        y: homeStateRef.current.y,
+        scale: 1,
+        duration: 0.9,
+        ease: 'power3.inOut',
+        onComplete: () => draggable.enable()
       });
     };
 
-    viewport.addEventListener('wheel', handleWheel, { passive: false });
-    // --- END OF NEW ZOOM LOGIC ---
+    // --------- ZOOM IN ---------
+    const handleZoomIn = (island) => {
+      if (isZoomedRef.current) return;
 
-    // Updated cleanup function
+      isZoomedRef.current = true;
+      draggable.disable();
+      viewport.classList.add('zoomed-in');
+
+      // island.offsetLeft/Top are relative to the canvas top-left (we anchor transforms to 0 0)
+      const islandCenterX = island.offsetLeft + island.offsetWidth / 2;
+      const islandCenterY = island.offsetTop + island.offsetHeight / 2;
+
+      const vpWidth = viewport.offsetWidth;
+      const vpHeight = viewport.offsetHeight;
+
+      // Make island occupy ~80% of the smaller viewport axis
+      const paddingRatio = 0.8;
+      const scaleX = (vpWidth * paddingRatio) / island.offsetWidth;
+      const scaleY = (vpHeight * paddingRatio) / island.offsetHeight;
+      const newScale = Math.min(scaleX, scaleY, 3); // optional max scale
+
+      // To center island: viewportCenter - islandCenter * scale
+      const newX = vpWidth / 2 - islandCenterX * newScale;
+      const newY = vpHeight / 2 - islandCenterY * newScale;
+
+      gsap.to(canvas, {
+        x: newX,
+        y: newY,
+        scale: newScale,
+        duration: 0.9,
+        ease: 'power3.inOut'
+      });
+    };
+
+    // --------- CLICK HANDLERS ---------
+    const islandHandlers = [];
+
+    islands.forEach(island => {
+      const clickHandler = (e) => {
+        e.stopPropagation(); // prevent viewport click from firing
+        handleZoomIn(island);
+      };
+
+      island.addEventListener('click', clickHandler);
+      islandHandlers.push({ island, clickHandler });
+    });
+
+    const viewportClick = (e) => {
+      if (e.target.classList.contains('island')) return;
+      handleZoomOut();
+    };
+
+    viewport.addEventListener('click', viewportClick);
+
+    // --------- CLEANUP ---------
     return () => {
-      if (draggableInstance[0]) draggableInstance[0].kill();
-      viewport.removeEventListener('wheel', handleWheel); // ✅ NEW: Clean up the event listener
+      draggable.kill();
+      islandHandlers.forEach(({ island, clickHandler }) => {
+        island.removeEventListener('click', clickHandler);
+      });
+      viewport.removeEventListener('click', viewportClick);
     };
   }, []);
 

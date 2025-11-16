@@ -1,16 +1,16 @@
 /* src/App.css */
 
-/* Basic reset and full-screen setup */
+/* Fullscreen layout */
 body, html, #root {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden; /* Crucial: prevents scrollbars */
+  overflow: hidden;
   background-color: #fdfdfd;
 }
 
-/* The fixed window we look through */
+/* Viewport */
 .viewport {
   position: fixed;
   top: 0;
@@ -19,20 +19,22 @@ body, html, #root {
   height: 100vh;
 }
 
-/* The giant, movable world that holds our islands */
-/* src/App.css */
+/* When zoomed-in, cursor becomes zoom-out */
+.viewport.zoomed-in {
+  cursor: zoom-out;
+}
 
-/* ... other styles ... */
-
+/* Canvas holding islands */
 .canvas {
   position: absolute;
   width: 5000px;
   height: 5000px;
-  
-  /* REMOVED: top, left, and transform. GSAP will control this now. */
-  will-change: transform; 
-  
-  /* The blueprint grid background */
+
+  /* IMPORTANT: anchor transforms to top-left so x/y math is simple */
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+
   background-color: #fdfdfd;
   background-image:
     linear-gradient(rgba(0, 110, 255, 0.1) 1px, transparent 1px),
@@ -40,28 +42,33 @@ body, html, #root {
   background-size: 20px 20px;
 }
 
-/* ... other styles ... */
-
-/* Base style for all islands */
+/* Island base style */
 .island {
-  position: absolute; /* Allows us to place them anywhere on the canvas */
+  position: absolute;
   width: 250px;
   height: 150px;
   border: 2px solid #006eff;
   background-color: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(5px);
-  
-  /* Just for visual feedback */
+
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: monospace;
   font-size: 1.2rem;
   color: #006eff;
+
+  cursor: zoom-in;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-/* Positioning for each individual island */
-#island-1 { top: 2400px; left: 2350px; } /* Central island */
+.island:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 30px rgba(0, 110, 255, 0.2);
+}
+
+/* Island positions */
+#island-1 { top: 2400px; left: 2350px; }
 #island-2 { top: 2100px; left: 1900px; }
 #island-3 { top: 2750px; left: 2200px; }
 #island-4 { top: 2300px; left: 2800px; }
