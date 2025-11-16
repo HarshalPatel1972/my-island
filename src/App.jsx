@@ -1,36 +1,36 @@
 // src/App.jsx
 
-import { useRef, useEffect } from 'react'; // Import React hooks
-import gsap from 'gsap';                    // Import GSAP
-import { Draggable } from 'gsap/Draggable'; // Import the Draggable plugin
+import { useRef, useEffect } from 'react';
+import gsap from 'gsap';
+import { Draggable } from 'gsap/Draggable';
 import './App.css';
 
-// Register the Draggable plugin with GSAP
 gsap.registerPlugin(Draggable);
 
 function App() {
-  // Create a ref to attach to our canvas element
   const canvasRef = useRef(null);
+  const viewportRef = useRef(null); // --- NEW: Create a ref for the viewport ---
 
-  // This useEffect hook will run once, after the component mounts
   useEffect(() => {
-    // We target the ref's "current" property, which is the actual DOM element
+    // We pass the viewportRef to the Draggable instance
     const draggableInstance = Draggable.create(canvasRef.current, {
-      type: "x,y", // Allows dragging on both the x and y axis
+      type: "x,y",
+      inertia: true,
+      // --- UPDATED: Define the boundaries for the drag ---
+      bounds: viewportRef.current, 
+      edgeResistance: 0.85, // I've increased this a bit for a more noticeable effect
     });
 
-    // This is a cleanup function. It runs when the component unmounts.
-    // It's a best practice to kill GSAP instances to prevent memory leaks.
     return () => {
       if (draggableInstance[0]) {
         draggableInstance[0].kill();
       }
     };
-  }, []); // The empty array [] means this effect runs only on mount and unmount
+  }, []);
 
   return (
-    <div className="viewport">
-      {/* Attach the ref to the canvas div */}
+    // --- UPDATED: Attach the new ref to the viewport div ---
+    <div className="viewport" ref={viewportRef}> 
       <div className="canvas" ref={canvasRef}>
         <div className="island" id="island-1">Welcome</div>
         <div className="island" id="island-2">Project 1</div>
