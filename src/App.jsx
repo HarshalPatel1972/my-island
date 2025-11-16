@@ -1,11 +1,36 @@
 // src/App.jsx
+
 import { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { Draggable } from 'gsap/Draggable';
 import { InertiaPlugin } from 'gsap/InertiaPlugin';
 import './App.css';
 
+import ProjectIsland from './components/ProjectIsland';
+
 gsap.registerPlugin(Draggable, InertiaPlugin);
+
+// ⭐ PROJECT DATA
+const projectsData = [
+  {
+    id: "project-1",
+    title: "AI Research Portal",
+    imageSrc: "https://picsum.photos/seed/ai123/400/300",
+    position: { top: "2100px", left: "1900px" }
+  },
+  {
+    id: "project-2",
+    title: "Blockchain Health System",
+    imageSrc: "https://picsum.photos/seed/blockchain456/400/300",
+    position: { top: "2750px", left: "2200px" }
+  },
+  {
+    id: "project-3",
+    title: "Portfolio Universe",
+    imageSrc: "https://picsum.photos/seed/portfolio789/400/300",
+    position: { top: "2300px", left: "2800px" }
+  }
+];
 
 function App() {
   const canvasRef = useRef(null);
@@ -17,11 +42,12 @@ function App() {
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
     const canvas = canvasRef.current;
+
     const islands = gsap.utils.toArray('.island');
 
     if (!viewport || !canvas || islands.length === 0) return;
 
-    // --------- CALCULATE CONTENT BOUNDS ---------
+    // --------- BOUNDARY CALC ---------
     let contentBounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
 
     islands.forEach(island => {
@@ -39,7 +65,6 @@ function App() {
       maxY: -contentBounds.minY + padding
     };
 
-    // --------- INITIAL CENTER ON island-1 ---------
     const welcomeIsland = document.getElementById('island-1');
 
     const initialX = viewport.offsetWidth / 2 -
@@ -50,12 +75,16 @@ function App() {
 
     homeStateRef.current = { x: initialX, y: initialY, scale: 1 };
 
-    // Ensure transform-origin is set for GSAP and the computed math (top-left anchor)
-    gsap.set(canvas, { x: homeStateRef.current.x, y: homeStateRef.current.y, scale: 1, transformOrigin: '0 0' });
+    // IMPORTANT FIX
+    gsap.set(canvas, { 
+      x: homeStateRef.current.x,
+      y: homeStateRef.current.y,
+      scale: 1,
+      transformOrigin: "0 0"
+    });
 
-    // --------- DRAGGABLE SETUP ---------
     const draggable = Draggable.create(canvas, {
-      type: 'x,y',
+      type: "x,y",
       bounds: bounds,
       inertia: true,
       edgeResistance: 0.9
@@ -86,20 +115,17 @@ function App() {
       draggable.disable();
       viewport.classList.add('zoomed-in');
 
-      // island.offsetLeft/Top are relative to the canvas top-left (we anchor transforms to 0 0)
       const islandCenterX = island.offsetLeft + island.offsetWidth / 2;
       const islandCenterY = island.offsetTop + island.offsetHeight / 2;
 
       const vpWidth = viewport.offsetWidth;
       const vpHeight = viewport.offsetHeight;
 
-      // Make island occupy ~80% of the smaller viewport axis
       const paddingRatio = 0.8;
       const scaleX = (vpWidth * paddingRatio) / island.offsetWidth;
       const scaleY = (vpHeight * paddingRatio) / island.offsetHeight;
-      const newScale = Math.min(scaleX, scaleY, 3); // optional max scale
+      const newScale = Math.min(scaleX, scaleY, 3);
 
-      // To center island: viewportCenter - islandCenter * scale
       const newX = vpWidth / 2 - islandCenterX * newScale;
       const newY = vpHeight / 2 - islandCenterY * newScale;
 
@@ -117,7 +143,7 @@ function App() {
 
     islands.forEach(island => {
       const clickHandler = (e) => {
-        e.stopPropagation(); // prevent viewport click from firing
+        e.stopPropagation();
         handleZoomIn(island);
       };
 
@@ -132,7 +158,6 @@ function App() {
 
     viewport.addEventListener('click', viewportClick);
 
-    // --------- CLEANUP ---------
     return () => {
       draggable.kill();
       islandHandlers.forEach(({ island, clickHandler }) => {
@@ -140,15 +165,27 @@ function App() {
       });
       viewport.removeEventListener('click', viewportClick);
     };
+
   }, []);
 
   return (
     <div className="viewport" ref={viewportRef}>
       <div className="canvas" ref={canvasRef}>
-        <div className="island" id="island-1">Welcome</div>
-        <div className="island" id="island-2">Project 1</div>
-        <div className="island" id="island-3">About</div>
-        <div className="island" id="island-4">Contact</div>
+
+        {/* ORIGINAL WELCOME ISLAND */}
+        <div className="island" id="island-1" style={{ top: "2400px", left: "2350px" }}>
+          Welcome
+        </div>
+
+        {/* ⭐ PROJECT ISLANDS (dynamic) */}
+        {projectsData.map((project) => (
+          <ProjectIsland
+            key={project.id}
+            id={project.id}
+            project={project}
+          />
+        ))}
+
       </div>
     </div>
   );
