@@ -20,14 +20,17 @@ body, html, #root {
 }
 
 /* The giant, movable world that holds our islands */
+/* src/App.css */
+
+/* ... other styles ... */
+
 .canvas {
   position: absolute;
-  width: 5000px; /* Big enough to pan around */
+  width: 5000px;
   height: 5000px;
-  /* Center the canvas initially */
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  
+  /* REMOVED: top, left, and transform. GSAP will control this now. */
+  will-change: transform; 
   
   /* The blueprint grid background */
   background-color: #fdfdfd;
@@ -36,6 +39,8 @@ body, html, #root {
     linear-gradient(90deg, rgba(0, 110, 255, 0.1) 1px, transparent 1px);
   background-size: 20px 20px;
 }
+
+/* ... other styles ... */
 
 /* Base style for all islands */
 .island {
