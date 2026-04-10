@@ -8,6 +8,7 @@ import './App.css';
 
 import ProjectIsland from './components/ProjectIsland';
 import ProjectDetail from './components/ProjectDetail';
+import BackgroundElements from './components/BackgroundElements';
 
 gsap.registerPlugin(Draggable, InertiaPlugin);
 
@@ -190,6 +191,7 @@ function App() {
   return (
     <>
       <div className="viewport" ref={viewportRef}>
+        <BackgroundElements />
         <div className="canvas" ref={canvasRef}>
           
           {/* ORIGINAL WELCOME ISLAND */}
