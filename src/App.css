@@ -10,6 +10,30 @@ body, html, #root {
   background-color: #fdfdfd;
 }
 
+.viewport {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+  cursor: grab;
+}
+
+.background-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bubble {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  filter: blur(40px);
+  will-change: transform;
+}
+
 /* The fixed window we look through */
 .viewport {
   position: fixed;
